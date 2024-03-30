@@ -11,4 +11,8 @@ public class CreateCommand {
             @XmlElement(name = "symbol", type = SymbolCommand.class)
     })
     private List<Object> commands;
+
+    public List<Object> getCommands() {
+        return commands;
+    }
 }

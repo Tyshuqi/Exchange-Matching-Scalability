@@ -11,4 +11,12 @@ public class CreateAccountCommand {
 
     @XmlAttribute(name = "balance")
     private double balance;
+
+    public String getId() {
+        return id;
+    }
+
+    public double getBalance() {
+        return balance;
+    }
 }
