@@ -14,8 +14,8 @@ public class Account {
 
     @ManyToMany
     @JoinTable(
-            name = "account_symbol",
+            name = "account_position",
             joinColumns = @JoinColumn(name = "account_id"),
-            inverseJoinColumns = @JoinColumn(name = "symbol_id"))
-    private Set<Symbol> symbols = new HashSet<>();
+            inverseJoinColumns = @JoinColumn(name = "position_id"))
+    private Set<Position> positions = new HashSet<>();
 }

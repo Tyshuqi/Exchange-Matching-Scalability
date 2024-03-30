@@ -5,11 +5,16 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-public class Symbol {
+public class Position {
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     private String sym;
 
-    @ManyToMany(mappedBy = "symbols")
+    private int amount;
+
+    @ManyToMany(mappedBy = "positions")
     private Set<Account> accounts = new HashSet<>();
 
 }
