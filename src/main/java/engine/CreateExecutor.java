@@ -6,13 +6,16 @@ import command.SymbolAccountCommand;
 import command.SymbolCommand;
 import entity.Account;
 import entity.Position;
+import org.w3c.dom.Document;
 import utils.EntityManagement;
+import utils.XMLResponseGenerator;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
 import javax.persistence.LockModeType;
 import javax.persistence.PersistenceException;
-import javax.swing.text.html.parser.Entity;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 import java.util.List;
 
 public class CreateExecutor {
@@ -22,19 +25,26 @@ public class CreateExecutor {
         this.command = command;
     }
 
-    public void execute() {
-        List<Object> inputCommands = command.getCommands();
-        for (Object command : inputCommands) {
-            if (command instanceof CreateAccountCommand) {
-                CreateAccountCommand accountCommand = (CreateAccountCommand) command;
-                // handle accountCommand
-                handleAccountCommand(accountCommand);
-            } else if (command instanceof SymbolCommand) {
-                // Handle SymbolCommand
-                SymbolCommand symbolCommand = (SymbolCommand) command;
-                // handle symbolCommand
-                handleSymbolCommand(symbolCommand);
+    public String execute() {
+        try {
+            Document responseDocument = XMLResponseGenerator.generateResponseDocument();
+            List<Object> inputCommands = command.getCommands();
+            for (Object command : inputCommands) {
+                if (command instanceof CreateAccountCommand) {
+                    CreateAccountCommand accountCommand = (CreateAccountCommand) command;
+                    // handle accountCommand
+                    handleAccountCommand(accountCommand);
+                } else if (command instanceof SymbolCommand) {
+                    // Handle SymbolCommand
+                    SymbolCommand symbolCommand = (SymbolCommand) command;
+                    // handle symbolCommand
+                    handleSymbolCommand(symbolCommand);
+                }
             }
+            return XMLResponseGenerator.convertToString(responseDocument);
+        }
+        catch (ParserConfigurationException | TransformerException e) {
+            return "<error>Unexpected XML Parser Error</error>";
         }
     }
     public void handleSymbolCommand(SymbolCommand symbolCommand) {

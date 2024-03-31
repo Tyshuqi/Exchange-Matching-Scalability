@@ -4,7 +4,10 @@ import command.CreateCommand;
 import command.TransactionsCommand;
 import utils.XMLParser;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
@@ -16,18 +19,22 @@ public class TaskHandler implements Runnable {
 
     @Override
     public void run() {
-        try (DataInputStream inputStream = new DataInputStream(clientSocket.getInputStream())) {
+        try (DataInputStream inputStream = new DataInputStream(clientSocket.getInputStream());
+             DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream())) {
             String message = inputStream.readUTF();
             Object command = XMLParser.parse(message);
+            String response = "";
 
             if (command instanceof CreateCommand) {
                 CreateExecutor createExecutor = new CreateExecutor((CreateCommand) command);
-                createExecutor.execute();
+                response = createExecutor.execute();
             }
             else if (command instanceof TransactionsCommand) {
                 TransactionsExecutor transactionsExecutor = new TransactionsExecutor((TransactionsCommand) command);
-                transactionsExecutor.execute();
+                response = transactionsExecutor.execute();
             }
+
+            outputStream.writeUTF(response);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
