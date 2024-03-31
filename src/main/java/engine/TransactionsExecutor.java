@@ -6,7 +6,10 @@ import command.TransactionsCommand;
 import entity.Account;
 import entity.Order;
 import entity.Transaction;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import utils.EntityManagement;
+import utils.XMLResponseGenerator;
 
 import javax.persistence.EntityManager;
 import javax.persistence.LockModeType;
@@ -15,6 +18,8 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,18 +31,25 @@ public class TransactionsExecutor {
         this.command = command;
     }
 
-    public void execute() {
-        for (Object subCommand: command.getCommands()) {
-            if (subCommand instanceof OrderCommand) {
-                executeOrder((OrderCommand) subCommand);
+    public String execute() {
+        try {
+            Document responseDocument = XMLResponseGenerator.generateResponseDocument();
+            for (Object subCommand : command.getCommands()) {
+                if (subCommand instanceof OrderCommand) {
+                    Element orderResponse = executeOrder((OrderCommand) subCommand, responseDocument);
+                    responseDocument.getDocumentElement().appendChild(orderResponse);
+                } else if (subCommand instanceof CancelCommand) {
+                    executeCancel((CancelCommand) subCommand, responseDocument);
+                }
             }
-            else if (subCommand instanceof CancelCommand) {
-                executeCancel((CancelCommand) subCommand);
-            }
+            return XMLResponseGenerator.convertToString(responseDocument);
+        }
+        catch (ParserConfigurationException | TransformerException e) {
+            return "<error>Unexpected XML Parser Error</error>";
         }
     }
 
-    private void executeOrder(OrderCommand orderCommand) {
+    private Element executeOrder(OrderCommand orderCommand, Document responseDocument) {
         EntityManager entityManager = EntityManagement.getEntityManager();
         try {
             entityManager.getTransaction().begin();
@@ -53,13 +65,13 @@ public class TransactionsExecutor {
                 newOrder.setAmount(newOrder.getAmount() + (newOrder.getAmount() >= 0 ? -tradeAmount : tradeAmount));
                 order.setAmount(order.getAmount() + (order.getAmount() >= 0 ? -tradeAmount : tradeAmount));
 
-                long created_at = Instant.now().getEpochSecond();
+                long createdAt = Instant.now().getEpochSecond();
 
-                Transaction transactionForMatch = new Transaction(tradeAmount, order.getLimitPrice(), created_at, order);
+                Transaction transactionForMatch = new Transaction(tradeAmount, order.getLimitPrice(), createdAt, order);
                 order.addTransaction(transactionForMatch);
                 entityManager.persist(transactionForMatch);
 
-                Transaction transactionForNewOrder = new Transaction(tradeAmount, order.getLimitPrice(), created_at, newOrder);
+                Transaction transactionForNewOrder = new Transaction(tradeAmount, order.getLimitPrice(), createdAt, newOrder);
                 order.addTransaction(transactionForNewOrder);
                 entityManager.persist(transactionForNewOrder);
 
@@ -82,13 +94,15 @@ public class TransactionsExecutor {
             }
 
             entityManager.getTransaction().commit();
+
+            return XMLResponseGenerator.generateOpenedResponse(responseDocument, newOrder.getId(), orderCommand.getSym(), orderCommand.getAmount(), orderCommand.getLimit());
         } catch (Exception e) {
             e.printStackTrace();
             entityManager.getTransaction().rollback();
+            return XMLResponseGenerator.generateErrorResponse(responseDocument, "Transaction Error");
         } finally {
             entityManager.close();
         }
-
     }
 
     private List<Order> getMatchingOrders(EntityManager entityManager, Order order) {
@@ -117,7 +131,7 @@ public class TransactionsExecutor {
         return query.getResultList();
     }
 
-    private void executeCancel(CancelCommand cancelCommand) {
+    private void executeCancel(CancelCommand cancelCommand, Document responseDocument) {
         EntityManager entityManager = EntityManagement.getEntityManager();
         try {
             entityManager.getTransaction().begin();

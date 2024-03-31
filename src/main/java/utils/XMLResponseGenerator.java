@@ -16,7 +16,7 @@ import java.io.StringWriter;
 
 public class XMLResponseGenerator {
 
-    public static String generateOpenedResponse(Order order) throws ParserConfigurationException, TransformerException {
+    public static Document generateResponseDocument() throws ParserConfigurationException {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document document = builder.newDocument();
@@ -24,16 +24,26 @@ public class XMLResponseGenerator {
         Element results = document.createElement("results");
         document.appendChild(results);
 
-        Element opened = document.createElement("opened");
-        opened.setAttribute("id", String.valueOf(order.getId()));
-        opened.setAttribute("sym", order.getSymbol());
-        opened.setAttribute("amount", String.valueOf(order.getAmount()));
-        opened.setAttribute("limit", String.format("%.2f", order.getLimitPrice()));
-        results.appendChild(opened);
-
-        return convertToString(document);
+        return document;
     }
-    private static String convertToString(Document document) throws TransformerException {
+
+    public static Element generateOpenedResponse(Document document, Long id, String sym, int amount, double limit) {
+        Element opened = document.createElement("opened");
+        opened.setAttribute("id", String.valueOf(id));
+        opened.setAttribute("sym", sym);
+        opened.setAttribute("amount", String.valueOf(amount));
+        opened.setAttribute("limit", String.format("%.2f", limit));
+
+        return opened;
+    }
+
+    public static Element generateErrorResponse(Document document, String message) {
+        Element error = document.createElement("error");
+        error.setTextContent(message);
+        return error;
+    }
+
+    public static String convertToString(Document document) throws TransformerException {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         Transformer transformer = transformerFactory.newTransformer();
         StringWriter writer = new StringWriter();
