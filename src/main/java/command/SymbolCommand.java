@@ -10,4 +10,14 @@ public class SymbolCommand {
 
     @XmlElement(name = "account")
     private List<SymbolAccountCommand> accounts;
+
+    // Getter method for the 'sym' field
+    public String getSym() {
+        return sym;
+    }
+
+    // Getter method for the 'accounts' list
+    public List<SymbolAccountCommand> getAccounts() {
+        return accounts;
+    }
 }
