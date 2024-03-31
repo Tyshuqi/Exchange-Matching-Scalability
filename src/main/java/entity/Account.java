@@ -12,29 +12,29 @@ public class Account {
     @Column(nullable = false)
     private Double balance;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Double getBalance() {
-        return balance;
-    }
-
-    public void setBalance(Double balance) {
-        this.balance = balance;
-    }
-
-    public Set<Position> getPositions() {
-        return positions;
-    }
-
-    public void setPositions(Set<Position> positions) {
-        this.positions = positions;
-    }
+//    public Long getId() {
+//        return id;
+//    }
+//
+//    public void setId(Long id) {
+//        this.id = id;
+//    }
+//
+//    public Double getBalance() {
+//        return balance;
+//    }
+//
+//    public void setBalance(Double balance) {
+//        this.balance = balance;
+//    }
+//
+//    public Set<Position> getPositions() {
+//        return positions;
+//    }
+//
+//    public void setPositions(Set<Position> positions) {
+//        this.positions = positions;
+//    }
 
     @ManyToMany
     @JoinTable(
