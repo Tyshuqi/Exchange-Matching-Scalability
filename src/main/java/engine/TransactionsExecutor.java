@@ -42,7 +42,7 @@ public class TransactionsExecutor {
         try {
             entityManager.getTransaction().begin();
             Order newOrder = new Order(orderCommand);
-            Account newOrderAccount = entityManager.find(Account.class, Long.parseLong(command.getAccount()));
+            Account newOrderAccount = entityManager.find(Account.class, Long.parseLong(command.getAccount()), LockModeType.PESSIMISTIC_WRITE);
 
             entityManager.persist(newOrder);
             newOrder.setAccount(newOrderAccount);
@@ -64,6 +64,7 @@ public class TransactionsExecutor {
                 entityManager.persist(transactionForNewOrder);
 
                 Account orderAccount = order.getAccount();
+                entityManager.lock(orderAccount, LockModeType.PESSIMISTIC_WRITE);
                 double balanceChange = newOrder.getAmount() >= 0 ? order.getLimitPrice() * tradeAmount : -(order.getLimitPrice() * tradeAmount);
                 orderAccount.setBalance(orderAccount.getBalance() + balanceChange);
                 newOrderAccount.setBalance(newOrderAccount.getBalance() - balanceChange);
