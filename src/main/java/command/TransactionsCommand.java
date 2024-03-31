@@ -16,5 +16,13 @@ public class TransactionsCommand {
     })
     private List<Object> commands;
 
+    public String getAccount() {
+        return account;
+    }
+
+    public List<Object> getCommands() {
+        return commands;
+    }
+
     // Getters and Setters
 }

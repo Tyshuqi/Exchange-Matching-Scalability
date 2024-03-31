@@ -12,4 +12,16 @@ public class OrderCommand {
 
     @XmlAttribute(name = "limit")
     private double limit;
+
+    public String getSym() {
+        return sym;
+    }
+
+    public int getAmount() {
+        return amount;
+    }
+
+    public double getLimit() {
+        return limit;
+    }
 }
