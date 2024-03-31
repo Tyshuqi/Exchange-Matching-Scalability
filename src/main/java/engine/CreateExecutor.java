@@ -40,6 +40,12 @@ public class CreateExecutor {
     public void handleSymbolCommand(SymbolCommand symbolCommand) {
         String symbol = symbolCommand.getSym();
         List<SymbolAccountCommand> accounts = symbolCommand.getAccounts();
+
+        //Handle the case where there are no accounts
+        if (accounts == null || accounts.isEmpty()) {
+            System.out.println("No accounts specified for symbol: " + symbol);
+            return;
+        }
         for (SymbolAccountCommand account : accounts) {
             insertNewShares(account, symbol);
         }
@@ -53,38 +59,24 @@ public class CreateExecutor {
             transaction.begin();
             // Convert account ID from String to long
             long accountId = Long.parseLong(account.getId());
-
             // Attempt to find the target Account in the database
             Account targetAccount = entityManager.find(Account.class, accountId, LockModeType.PESSIMISTIC_WRITE);
 
             if (targetAccount == null) {
                 // Target account does not exist, handle this case appropriately
                 throw new IllegalStateException("Account with ID " + accountId + " does not exist.");
-            } else {
-                // Check if a Position with the same symbol already exists for the Account
-                Position existingPosition = targetAccount.getPositions().stream()
-                        .filter(pos -> symbol.equals(pos.getSym()))
-                        .findFirst()
-                        .orElse(null);
-
-                if (existingPosition != null) {
-                    // Position exists, update shares
-                    int totalShares = existingPosition.getAmount() + account.getShares();
-                    existingPosition.setAmount(totalShares);
-                    // Assuming Position entity is managed, no need to explicitly persist
-                } else {
-                    // No existing Position, proceed to persist a new Position
-                    int shares = account.getShares();
-                    Position newPosition = new Position();
-                    newPosition.setSym(symbol);
-                    newPosition.setAmount(shares);
-                    newPosition.addAccount(targetAccount);
-
-                    entityManager.persist(newPosition);
-                }
             }
-
-            transaction.commit(); // Commit if all operations are successful
+            Position existingPosition = findPositionBySymbol(targetAccount, symbol);
+            // Position exists, update shares
+            if (existingPosition != null) {
+                updateExistingPosition(existingPosition, account.getShares());
+            }
+            // No existing Position, proceed to persist a new Position
+            else {
+                createAndPersistNewPosition(entityManager, targetAccount, symbol, account.getShares());
+            }
+            // Commit if all operations are successful
+            transaction.commit();
         } catch (NumberFormatException e) {
             // Handle case where account ID is not in a valid long format
             if (transaction.isActive()) {
@@ -105,14 +97,43 @@ public class CreateExecutor {
         }
     }
 
+    private Position findPositionBySymbol(Account account, String symbol) {
+        return account.getPositions().stream()
+                .filter(pos -> symbol.equals(pos.getSym()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void updateExistingPosition(Position position, int sharesToAdd) {
+        position.setAmount(position.getAmount() + sharesToAdd);
+    }
+
+    private void createAndPersistNewPosition(EntityManager entityManager, Account account, String symbol, int shares) {
+        Position newPosition = new Position();
+        newPosition.setSym(symbol);
+        newPosition.setAmount(shares);
+        newPosition.addAccount(account);
+        entityManager.persist(newPosition);
+    }
 
     public void handleAccountCommand(CreateAccountCommand accountCommand) {
         // TODO add err handling or type check
         String accountID = accountCommand.getId();
+        if (accountID == null || accountID.trim().isEmpty()) {
+            throw new IllegalArgumentException("Account ID cannot be null or empty.");
+        }
         double balance = accountCommand.getBalance();
+        if (balance < 0) {
+            throw new IllegalArgumentException("Balance cannot be negative.");
+        }
         // cast to long for persistent
-        long accountIdLong = Long.parseLong(accountID);
-        insertNewAcc(accountIdLong, balance);
+        long accountIDLong;
+        try {
+            accountIDLong = Long.parseLong(accountID);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Account ID must be a valid long number.", e);
+        }
+        insertNewAcc(accountIDLong, balance);
     }
 
     public void insertNewAcc(long accountIdLong, double balance) {
@@ -130,7 +151,7 @@ public class CreateExecutor {
 
                 entityManager.persist(newAccount);
             } else {
-                // Account al ready exists
+                // Account already exists
                 System.out.println("Account with ID " + accountIdLong + " already exists.");
             }
 
