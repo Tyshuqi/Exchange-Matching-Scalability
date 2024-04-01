@@ -4,8 +4,6 @@ import command.CreateCommand;
 import command.TransactionsCommand;
 import utils.XMLParser;
 
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerException;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;

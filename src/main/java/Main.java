@@ -34,9 +34,10 @@ public class Main {
 
         Document document = XMLResponseGenerator.generateResponseDocument();
         Element opened = XMLResponseGenerator.generateOpenedResponse(document, 10L, "abc", 1, 3.0);
-        Element error = XMLResponseGenerator.generateErrorResponse(document, "abc");
-        document.getDocumentElement().appendChild(opened);
-        document.getDocumentElement().appendChild(error);
+        Element error = XMLResponseGenerator.generateErrorResponseWithId(document, "123456", "Invalid Account ID");
+        document.getDocumentElement().appendChild(error.cloneNode(true));
+        document.getDocumentElement().appendChild(error.cloneNode(false));
+        document.getDocumentElement().appendChild(error.cloneNode(false));
 
         System.out.println(XMLResponseGenerator.convertToString(document));
 
