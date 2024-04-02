@@ -31,14 +31,16 @@ public class XMLResponseGenerator {
 
     public static Element generateCreatedResponse(Document document, Long id, String sym){
         Element created = document.createElement("created");
-        created.setAttribute("id", String.valueOf(id));
 
         // Add the symbol attribute if it's not null which means from handlesymbolcommand
         if (sym != null && !sym.isEmpty()) {
             created.setAttribute("sym", sym);
         }
+        created.setAttribute("id", String.valueOf(id));
+
         return created;
     }
+
 
     public static Element generateOpenedResponse(Document document, Long id, String sym, int amount, double limit) {
         Element opened = document.createElement("opened");
@@ -50,7 +52,7 @@ public class XMLResponseGenerator {
         return opened;
     }
 
-<<<<<<< HEAD
+
     public static Element generateErrorCreateResponse(Document document, String id, String sym, String message) {
         Element error = document.createElement("error");
         // Set the account id or sym as attributes, if provided
@@ -65,7 +67,7 @@ public class XMLResponseGenerator {
 
         return error;
     }
-=======
+
 
     public static Element generateStatusByOrder(Document document, Order order, boolean forCancel) {
         Element status = document.createElement(forCancel ? "canceled" : "status");
@@ -94,7 +96,7 @@ public class XMLResponseGenerator {
         return status;
     }
 
->>>>>>> 27c769375e3f9aa80b425e0a7a432e4e1d619df4
+
     public static Element generateErrorResponse(Document document, String message) {
         Element error = document.createElement("error");
         error.setTextContent(message);
@@ -119,6 +121,11 @@ public class XMLResponseGenerator {
     public static String convertToString(Document document) throws TransformerException {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         Transformer transformer = transformerFactory.newTransformer();
+        // Set properties for adding line breaks and indentation
+        transformer.setOutputProperty(javax.xml.transform.OutputKeys.INDENT, "yes");
+        // This property value is a suggestion to the transformer about the number of spaces to add per indentation level. Note that support for this property may vary between different implementations.
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+
         StringWriter writer = new StringWriter();
         transformer.transform(new DOMSource(document), new StreamResult(writer));
         return writer.getBuffer().toString();

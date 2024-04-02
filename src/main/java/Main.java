@@ -20,16 +20,15 @@ public class Main {
 
         Object command = XMLParser.parse("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                 "<create>\n" +
-                "<account id=\"123456\" balance=\"1000\"/>\n" +
+                "<account id=\"123456\" balance=\"-1000\"/>\n" +
                 "<symbol sym=\"SPY\">\n" +
-                "<account id=\"123456\">100000</account>\n" +
+                "<account id=\"23456\">-1000</account>\n" +
                 "</symbol>\n" +
                 "</create>");
 
-        if (command instanceof CreateCommand) {
-            CreateCommand createCommand = (CreateCommand) command;
-            CreateExecutor createExecutor = new CreateExecutor(createCommand);
-            System.out.println(createExecutor.execute());
+        EngineServer server = new EngineServer();
+        server.start();
+
 //            for (Object e: createCommand.getCommands()) {
 //                if (e instanceof CreateAccountCommand) {
 //                    CreateAccountCommand createAccountCommand = (CreateAccountCommand) e;
@@ -38,22 +37,15 @@ public class Main {
 //            }
         }
 
-<<<<<<< HEAD
 //        Document document = XMLResponseGenerator.generateResponseDocument();
 //        Element opened = XMLResponseGenerator.generateOpenedResponse(document, 10L, "abc", 1, 3.0);
-//        Element error = XMLResponseGenerator.generateErrorResponse(document, "abc");
-//        document.getDocumentElement().appendChild(opened);
-//        document.getDocumentElement().appendChild(error);
-=======
-        Document document = XMLResponseGenerator.generateResponseDocument();
-        Element opened = XMLResponseGenerator.generateOpenedResponse(document, 10L, "abc", 1, 3.0);
-        Element error = XMLResponseGenerator.generateErrorResponseWithId(document, "123456", "Invalid Account ID");
-        document.getDocumentElement().appendChild(error.cloneNode(true));
-        document.getDocumentElement().appendChild(error.cloneNode(false));
-        document.getDocumentElement().appendChild(error.cloneNode(false));
->>>>>>> 27c769375e3f9aa80b425e0a7a432e4e1d619df4
+//        Element error = XMLResponseGenerator.generateErrorResponseWithId(document, "123456", "Invalid Account ID");
+//        document.getDocumentElement().appendChild(error.cloneNode(true));
+//        document.getDocumentElement().appendChild(error.cloneNode(false));
+//        document.getDocumentElement().appendChild(error.cloneNode(false));
+
 
 //        System.out.println(XMLResponseGenerator.convertToString(document));
 
     }
-}
+
