@@ -1,11 +1,15 @@
 import command.CreateAccountCommand;
 import command.CreateCommand;
+import engine.CreateExecutor;
 import engine.EngineServer;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import utils.XMLParser;
 import utils.XMLResponseGenerator;
 
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 
@@ -24,21 +28,23 @@ public class Main {
 
         if (command instanceof CreateCommand) {
             CreateCommand createCommand = (CreateCommand) command;
-            for (Object e: createCommand.getCommands()) {
-                if (e instanceof CreateAccountCommand) {
-                    CreateAccountCommand createAccountCommand = (CreateAccountCommand) e;
-                    System.out.println(createAccountCommand.getId() + " " + createAccountCommand.getBalance());
-                }
-            }
+            CreateExecutor createExecutor = new CreateExecutor(createCommand);
+            System.out.println(createExecutor.execute());
+//            for (Object e: createCommand.getCommands()) {
+//                if (e instanceof CreateAccountCommand) {
+//                    CreateAccountCommand createAccountCommand = (CreateAccountCommand) e;
+//                    System.out.println(createAccountCommand.getId() + " " + createAccountCommand.getBalance());
+//                }
+//            }
         }
 
-        Document document = XMLResponseGenerator.generateResponseDocument();
-        Element opened = XMLResponseGenerator.generateOpenedResponse(document, 10L, "abc", 1, 3.0);
-        Element error = XMLResponseGenerator.generateErrorResponse(document, "abc");
-        document.getDocumentElement().appendChild(opened);
-        document.getDocumentElement().appendChild(error);
+//        Document document = XMLResponseGenerator.generateResponseDocument();
+//        Element opened = XMLResponseGenerator.generateOpenedResponse(document, 10L, "abc", 1, 3.0);
+//        Element error = XMLResponseGenerator.generateErrorResponse(document, "abc");
+//        document.getDocumentElement().appendChild(opened);
+//        document.getDocumentElement().appendChild(error);
 
-        System.out.println(XMLResponseGenerator.convertToString(document));
+//        System.out.println(XMLResponseGenerator.convertToString(document));
 
     }
 }

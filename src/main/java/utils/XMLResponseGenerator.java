@@ -27,6 +27,17 @@ public class XMLResponseGenerator {
         return document;
     }
 
+    public static Element generateCreatedResponse(Document document, Long id, String sym){
+        Element created = document.createElement("created");
+        created.setAttribute("id", String.valueOf(id));
+
+        // Add the symbol attribute if it's not null which means from handlesymbolcommand
+        if (sym != null && !sym.isEmpty()) {
+            created.setAttribute("sym", sym);
+        }
+        return created;
+    }
+
     public static Element generateOpenedResponse(Document document, Long id, String sym, int amount, double limit) {
         Element opened = document.createElement("opened");
         opened.setAttribute("id", String.valueOf(id));
@@ -37,6 +48,20 @@ public class XMLResponseGenerator {
         return opened;
     }
 
+    public static Element generateErrorCreateResponse(Document document, String id, String sym, String message) {
+        Element error = document.createElement("error");
+        // Set the account id or sym as attributes, if provided
+        if (id != null && !id.isEmpty()) {
+            error.setAttribute("id", id);
+        }
+        if (sym != null && !sym.isEmpty()) {
+            error.setAttribute("sym", sym);
+        }
+        // Set the error message
+        error.setTextContent(message);
+
+        return error;
+    }
     public static Element generateErrorResponse(Document document, String message) {
         Element error = document.createElement("error");
         error.setTextContent(message);
