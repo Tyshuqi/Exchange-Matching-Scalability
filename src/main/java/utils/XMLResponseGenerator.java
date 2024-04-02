@@ -1,6 +1,8 @@
 package utils;
 
+import command.OrderCommand;
 import entity.Order;
+import entity.Transaction;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -48,6 +50,7 @@ public class XMLResponseGenerator {
         return opened;
     }
 
+<<<<<<< HEAD
     public static Element generateErrorCreateResponse(Document document, String id, String sym, String message) {
         Element error = document.createElement("error");
         // Set the account id or sym as attributes, if provided
@@ -62,9 +65,54 @@ public class XMLResponseGenerator {
 
         return error;
     }
+=======
+
+    public static Element generateStatusByOrder(Document document, Order order, boolean forCancel) {
+        Element status = document.createElement(forCancel ? "canceled" : "status");
+        status.setAttribute("id", String.valueOf(order.getId()));
+
+        if (order.getStatus() == Order.Status.OPEN) {
+            Element open = document.createElement("open");
+            open.setAttribute("shares", String.valueOf(order.getAmount()));
+            status.appendChild(open);
+        }
+        else if (order.getStatus() == Order.Status.CANCELED) {
+            Element cancel = document.createElement("canceled");
+            cancel.setAttribute("shares", String.valueOf(order.getAmount()));
+            cancel.setAttribute("time", String.valueOf(order.getCanceledTime()));
+            status.appendChild(cancel);
+        }
+
+        for (Transaction transaction: order.getTransactions()) {
+            Element executed = document.createElement("executed");
+            executed.setAttribute("shares", String.valueOf(transaction.getShares()));
+            executed.setAttribute("price", String.format("%.2f", transaction.getPrice()));
+            executed.setAttribute("time", String.valueOf(transaction.getTime()));
+            status.appendChild(executed);
+        }
+
+        return status;
+    }
+
+>>>>>>> 27c769375e3f9aa80b425e0a7a432e4e1d619df4
     public static Element generateErrorResponse(Document document, String message) {
         Element error = document.createElement("error");
         error.setTextContent(message);
+        return error;
+    }
+
+    public static Element generateErrorResponseWithId(Document document, String id, String message) {
+        Element error = generateErrorResponse(document, message);
+        error.setAttribute("id", id);
+        return error;
+    }
+
+    public static Element generateOrderErrorResponse(Document document, OrderCommand orderCommand, String message) {
+        Element error = generateErrorResponse(document, message);
+        error.setAttribute("sym", orderCommand.getSym());
+        error.setAttribute("amount", String.valueOf(orderCommand.getAmount()));
+        error.setAttribute("limit", String.format("%.2f", orderCommand.getLimit()));
+
         return error;
     }
 

@@ -2,9 +2,11 @@ package engine;
 
 import command.CancelCommand;
 import command.OrderCommand;
+import command.QueryCommand;
 import command.TransactionsCommand;
 import entity.Account;
 import entity.Order;
+import entity.Position;
 import entity.Transaction;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -34,12 +36,35 @@ public class TransactionsExecutor {
     public String execute() {
         try {
             Document responseDocument = XMLResponseGenerator.generateResponseDocument();
-            for (Object subCommand : command.getCommands()) {
-                if (subCommand instanceof OrderCommand) {
-                    Element orderResponse = executeOrder((OrderCommand) subCommand, responseDocument);
-                    responseDocument.getDocumentElement().appendChild(orderResponse);
-                } else if (subCommand instanceof CancelCommand) {
-                    executeCancel((CancelCommand) subCommand, responseDocument);
+            EntityManager entityManager = EntityManagement.getEntityManager();
+
+            Account account;
+            try {
+                entityManager.getTransaction().begin();
+                account = entityManager.find(Account.class, Long.parseLong(command.getAccount()), LockModeType.PESSIMISTIC_READ);
+                entityManager.getTransaction().commit();
+            } finally {
+                entityManager.close();
+            }
+
+            if (account != null) {
+                for (Object subCommand : command.getCommands()) {
+                    if (subCommand instanceof OrderCommand) {
+                        Element orderResponse = executeOrder((OrderCommand) subCommand, responseDocument);
+                        responseDocument.getDocumentElement().appendChild(orderResponse);
+                    } else if (subCommand instanceof CancelCommand) {
+                        Element cancelResponse = executeCancel((CancelCommand) subCommand, responseDocument);
+                        responseDocument.getDocumentElement().appendChild(cancelResponse);
+                    } else if (subCommand instanceof QueryCommand) {
+                        Element queryResponse = executeQuery((QueryCommand) subCommand, responseDocument);
+                        responseDocument.getDocumentElement().appendChild(queryResponse);
+                    }
+                }
+            }
+            else {
+                Element error = XMLResponseGenerator.generateErrorResponseWithId(responseDocument, command.getAccount(), "Invalid Account ID");
+                for (Object ignored : command.getCommands()) {
+                    responseDocument.getDocumentElement().appendChild(error.cloneNode(true));
                 }
             }
             return XMLResponseGenerator.convertToString(responseDocument);
@@ -58,6 +83,43 @@ public class TransactionsExecutor {
 
             entityManager.persist(newOrder);
             newOrder.setAccount(newOrderAccount);
+
+            if (newOrder.getAmount() >= 0) {
+                double cost = - newOrder.getAmount() * newOrder.getLimitPrice();
+                if (newOrderAccount.getBalance() >= cost) {
+                    newOrderAccount.setBalance(newOrderAccount.getBalance() - cost);
+                }
+                else {
+                    entityManager.getTransaction().rollback();
+                    return XMLResponseGenerator.generateOrderErrorResponse(responseDocument, orderCommand, "Rejected for insufficient funds.");
+                }
+            }
+            else {
+                Position position = newOrderAccount.getPositions().stream()
+                        .filter(pos -> orderCommand.getSym().equals(pos.getSym()))
+                        .findFirst()
+                        .orElse(null);
+
+                String errorMessage = null;
+                if (position != null) {
+                    entityManager.lock(position, LockModeType.PESSIMISTIC_WRITE);
+                    if (position.getAmount() >= orderCommand.getAmount()){
+                        position.setAmount(position.getAmount() - orderCommand.getAmount());
+                        entityManager.merge(position);
+                    }
+                    else {
+                        errorMessage = "Rejected for insufficient shares.";
+                    }
+                }
+                else {
+                    errorMessage = "Rejected for nonexistent position.";
+                }
+
+                if (errorMessage != null) {
+                    entityManager.getTransaction().rollback();
+                    return XMLResponseGenerator.generateOrderErrorResponse(responseDocument, orderCommand, errorMessage);
+                }
+            }
 
             List<Order> matchingOrders = this.getMatchingOrders(entityManager, newOrder);
             for (Order order : matchingOrders) {
@@ -79,7 +141,9 @@ public class TransactionsExecutor {
                 entityManager.lock(orderAccount, LockModeType.PESSIMISTIC_WRITE);
                 double balanceChange = newOrder.getAmount() >= 0 ? order.getLimitPrice() * tradeAmount : -(order.getLimitPrice() * tradeAmount);
                 orderAccount.setBalance(orderAccount.getBalance() + balanceChange);
-                newOrderAccount.setBalance(newOrderAccount.getBalance() - balanceChange);
+                if (newOrder.getAmount() >= 0 && order.getLimitPrice() < newOrder.getLimitPrice()){
+                    newOrderAccount.setBalance(newOrderAccount.getBalance() + (newOrder.getLimitPrice() - order.getLimitPrice()) * tradeAmount);
+                }
                 entityManager.merge(orderAccount);
 
                 if (order.getAmount() == 0) {
@@ -96,7 +160,8 @@ public class TransactionsExecutor {
             entityManager.getTransaction().commit();
 
             return XMLResponseGenerator.generateOpenedResponse(responseDocument, newOrder.getId(), orderCommand.getSym(), orderCommand.getAmount(), orderCommand.getLimit());
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             e.printStackTrace();
             entityManager.getTransaction().rollback();
             return XMLResponseGenerator.generateErrorResponse(responseDocument, "Transaction Error");
@@ -117,11 +182,11 @@ public class TransactionsExecutor {
         if (order.getAmount() >= 0) {
             predicates.add(cb.lessThanOrEqualTo(orderRoot.get("limitPrice"), order.getLimitPrice()));
             predicates.add(cb.lessThan(orderRoot.get("amount"), 0));
-            cq.orderBy(cb.asc(orderRoot.get("limitPrice")), cb.asc(orderRoot.get("id")));
+            cq.orderBy(cb.asc(orderRoot.get("limitPrice")), cb.desc(orderRoot.get("id")));
         } else {
             predicates.add(cb.greaterThanOrEqualTo(orderRoot.get("limitPrice"), order.getLimitPrice()));
             predicates.add(cb.greaterThan(orderRoot.get("amount"), 0));
-            cq.orderBy(cb.desc(orderRoot.get("limitPrice")), cb.asc(orderRoot.get("id")));
+            cq.orderBy(cb.desc(orderRoot.get("limitPrice")), cb.desc(orderRoot.get("id")));
         }
 
         cq.select(orderRoot).where(cb.and(predicates.toArray(new Predicate[0])));
@@ -131,19 +196,57 @@ public class TransactionsExecutor {
         return query.getResultList();
     }
 
-    private void executeCancel(CancelCommand cancelCommand, Document responseDocument) {
+    private Element executeCancel(CancelCommand cancelCommand, Document responseDocument) {
         EntityManager entityManager = EntityManagement.getEntityManager();
         try {
+            Element response;
             entityManager.getTransaction().begin();
             Order order = entityManager.find(Order.class, Long.parseLong(cancelCommand.getId()), LockModeType.PESSIMISTIC_WRITE);
-            if (order.getStatus() == Order.Status.OPEN) {
-                order.cancel();
+
+            if (order != null) {
+                if (order.getStatus() == Order.Status.OPEN) {
+                    order.cancel();
+                    response = XMLResponseGenerator.generateStatusByOrder(responseDocument, order, true);
+                } else {
+                    response = XMLResponseGenerator.generateErrorResponseWithId(responseDocument, cancelCommand.getId(), "Order closed.");
+                }
+            }
+            else {
+                response = XMLResponseGenerator.generateErrorResponseWithId(responseDocument, cancelCommand.getId(), "Order not exist.");
             }
 
             entityManager.getTransaction().commit();
-        } catch (Exception e) {
+            return response;
+        }
+        catch (Exception e) {
             e.printStackTrace();
             entityManager.getTransaction().rollback();
+            return XMLResponseGenerator.generateErrorResponse(responseDocument, "Transaction Error");
+        } finally {
+            entityManager.close();
+        }
+    }
+
+    private Element executeQuery(QueryCommand queryCommand, Document responseDocument) {
+        EntityManager entityManager = EntityManagement.getEntityManager();
+        try {
+            Element response;
+            entityManager.getTransaction().begin();
+            Order order = entityManager.find(Order.class, Long.parseLong(queryCommand.getId()), LockModeType.PESSIMISTIC_READ);
+            if (order != null) {
+                response = XMLResponseGenerator.generateStatusByOrder(responseDocument, order, false);
+            }
+            else {
+                response = XMLResponseGenerator.generateErrorResponseWithId(responseDocument, queryCommand.getId(), "Order not exist.");
+            }
+
+            entityManager.getTransaction().commit();
+            return response;
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            entityManager.getTransaction().rollback();
+            return XMLResponseGenerator.generateErrorResponse(responseDocument, "Transaction Error");
         } finally {
             entityManager.close();
         }

@@ -6,4 +6,8 @@ import javax.xml.bind.annotation.*;
 public class QueryCommand {
     @XmlAttribute(name = "id")
     private String id;
+
+    public String getId() {
+        return id;
+    }
 }
