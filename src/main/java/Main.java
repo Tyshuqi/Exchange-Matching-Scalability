@@ -1,56 +1,49 @@
-import command.CreateAccountCommand;
 import command.CreateCommand;
+import command.TransactionsCommand;
 import engine.CreateExecutor;
-import engine.EngineServer;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
+import engine.TransactionsExecutor;
 import utils.XMLParser;
-import utils.XMLResponseGenerator;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerException;
 
 public class Main {
-    public static void main( String[] args ) throws ParserConfigurationException, TransformerException {
+    public static void main( String[] args ) {
 //        EngineServer server = new EngineServer();
 //        server.start();
 
-        Object command = XMLParser.parse("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                "<create>\n" +
-                "<account id=\"123456\" balance=\"1000\"/>\n" +
-                "<symbol sym=\"SPY\">\n" +
-                "<account id=\"123456\">100000</account>\n" +
-                "</symbol>\n" +
-                "</create>");
+        Object createCommand = XMLParser.parse("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <create>
+                <account id="123456" balance="2000"/>
+                <symbol sym="SPY">
+                <account id="123456">1000</account>
+                </symbol>
+                </create>""");
 
-        if (command instanceof CreateCommand) {
-            CreateCommand createCommand = (CreateCommand) command;
-            CreateExecutor createExecutor = new CreateExecutor(createCommand);
-            System.out.println(createExecutor.execute());
-//            for (Object e: createCommand.getCommands()) {
-//                if (e instanceof CreateAccountCommand) {
-//                    CreateAccountCommand createAccountCommand = (CreateAccountCommand) e;
-//                    System.out.println(createAccountCommand.getId() + " " + createAccountCommand.getBalance());
-//                }
-//            }
-        }
+        CreateExecutor createExecutor = new CreateExecutor((CreateCommand) createCommand);
+        String response = createExecutor.execute();
+        System.out.println("response is:" + response);
 
-//        Document document = XMLResponseGenerator.generateResponseDocument();
-//        Element opened = XMLResponseGenerator.generateOpenedResponse(document, 10L, "abc", 1, 3.0);
-//        Element error = XMLResponseGenerator.generateErrorResponse(document, "abc");
-//        document.getDocumentElement().appendChild(opened);
-//        document.getDocumentElement().appendChild(error);
-        Document document = XMLResponseGenerator.generateResponseDocument();
-        Element opened = XMLResponseGenerator.generateOpenedResponse(document, 10L, "abc", 1, 3.0);
-        Element error = XMLResponseGenerator.generateErrorResponseWithId(document, "123456", "Invalid Account ID");
-        document.getDocumentElement().appendChild(error.cloneNode(true));
-        document.getDocumentElement().appendChild(error.cloneNode(false));
-        document.getDocumentElement().appendChild(error.cloneNode(false));
+        Object command1 = XMLParser.parse("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <transactions id="123456">
+                <order sym="SPY" amount="20" limit="100"/>
+                <query id="1" />
+                </transactions>""");
 
-//        System.out.println(XMLResponseGenerator.convertToString(document));
+        TransactionsExecutor transactionsExecutor1 = new TransactionsExecutor((TransactionsCommand) command1);
+        response = transactionsExecutor1.execute();
+        System.out.println("response is:" + response);
 
+        Object command2 = XMLParser.parse("""
+                <?xml version="1.0" encoding="UTF-8"?>
+                <transactions id="123456">
+                <order sym="SPY" amount="-10" limit="50"/>
+                <cancel id="1" />
+                <query id="1" />
+                </transactions>""");
+
+        TransactionsExecutor transactionsExecutor2 = new TransactionsExecutor((TransactionsCommand) command2);
+        response = transactionsExecutor2.execute();
+        System.out.println("response is:" + response);
     }
 }
+

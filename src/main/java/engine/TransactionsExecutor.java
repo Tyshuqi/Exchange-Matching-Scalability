@@ -41,7 +41,7 @@ public class TransactionsExecutor {
             Account account;
             try {
                 entityManager.getTransaction().begin();
-                account = entityManager.find(Account.class, Long.parseLong(command.getAccount()), LockModeType.PESSIMISTIC_READ);
+                account = entityManager.find(Account.class, Long.parseLong(command.getAccountId()), LockModeType.PESSIMISTIC_READ);
                 entityManager.getTransaction().commit();
             } finally {
                 entityManager.close();
@@ -62,7 +62,7 @@ public class TransactionsExecutor {
                 }
             }
             else {
-                Element error = XMLResponseGenerator.generateErrorResponseWithId(responseDocument, command.getAccount(), "Invalid Account ID");
+                Element error = XMLResponseGenerator.generateErrorResponseWithId(responseDocument, command.getAccountId(), "Invalid Account ID");
                 for (Object ignored : command.getCommands()) {
                     responseDocument.getDocumentElement().appendChild(error.cloneNode(true));
                 }
@@ -72,6 +72,9 @@ public class TransactionsExecutor {
         catch (ParserConfigurationException | TransformerException e) {
             return "<error>Unexpected XML Parser Error</error>";
         }
+        catch (NumberFormatException e) {
+            return "<error>Disallowed message format</error>";
+        }
     }
 
     private Element executeOrder(OrderCommand orderCommand, Document responseDocument) {
@@ -79,13 +82,13 @@ public class TransactionsExecutor {
         try {
             entityManager.getTransaction().begin();
             Order newOrder = new Order(orderCommand);
-            Account newOrderAccount = entityManager.find(Account.class, Long.parseLong(command.getAccount()), LockModeType.PESSIMISTIC_WRITE);
+            Account newOrderAccount = entityManager.find(Account.class, Long.parseLong(command.getAccountId()), LockModeType.PESSIMISTIC_WRITE);
 
             entityManager.persist(newOrder);
             newOrder.setAccount(newOrderAccount);
 
             if (newOrder.getAmount() >= 0) {
-                double cost = - newOrder.getAmount() * newOrder.getLimitPrice();
+                double cost = newOrder.getAmount() * newOrder.getLimitPrice();
                 if (newOrderAccount.getBalance() >= cost) {
                     newOrderAccount.setBalance(newOrderAccount.getBalance() - cost);
                 }
@@ -103,8 +106,8 @@ public class TransactionsExecutor {
                 String errorMessage = null;
                 if (position != null) {
                     entityManager.lock(position, LockModeType.PESSIMISTIC_WRITE);
-                    if (position.getAmount() >= orderCommand.getAmount()){
-                        position.setAmount(position.getAmount() - orderCommand.getAmount());
+                    if (position.getAmount() >= - orderCommand.getAmount()){
+                        position.setAmount(position.getAmount() + orderCommand.getAmount());
                         entityManager.merge(position);
                     }
                     else {
@@ -137,14 +140,7 @@ public class TransactionsExecutor {
                 order.addTransaction(transactionForNewOrder);
                 entityManager.persist(transactionForNewOrder);
 
-                Account orderAccount = order.getAccount();
-                entityManager.lock(orderAccount, LockModeType.PESSIMISTIC_WRITE);
-                double balanceChange = newOrder.getAmount() >= 0 ? order.getLimitPrice() * tradeAmount : -(order.getLimitPrice() * tradeAmount);
-                orderAccount.setBalance(orderAccount.getBalance() + balanceChange);
-                if (newOrder.getAmount() >= 0 && order.getLimitPrice() < newOrder.getLimitPrice()){
-                    newOrderAccount.setBalance(newOrderAccount.getBalance() + (newOrder.getLimitPrice() - order.getLimitPrice()) * tradeAmount);
-                }
-                entityManager.merge(orderAccount);
+                accountChangeForNewOrder(entityManager, newOrder, order, newOrderAccount, orderCommand, tradeAmount);
 
                 if (order.getAmount() == 0) {
                     order.setStatus(Order.Status.EXECUTED);
@@ -182,11 +178,11 @@ public class TransactionsExecutor {
         if (order.getAmount() >= 0) {
             predicates.add(cb.lessThanOrEqualTo(orderRoot.get("limitPrice"), order.getLimitPrice()));
             predicates.add(cb.lessThan(orderRoot.get("amount"), 0));
-            cq.orderBy(cb.asc(orderRoot.get("limitPrice")), cb.desc(orderRoot.get("id")));
+            cq.orderBy(cb.desc(orderRoot.get("limitPrice")), cb.asc(orderRoot.get("id")));
         } else {
             predicates.add(cb.greaterThanOrEqualTo(orderRoot.get("limitPrice"), order.getLimitPrice()));
             predicates.add(cb.greaterThan(orderRoot.get("amount"), 0));
-            cq.orderBy(cb.desc(orderRoot.get("limitPrice")), cb.desc(orderRoot.get("id")));
+            cq.orderBy(cb.desc(orderRoot.get("limitPrice")), cb.asc(orderRoot.get("id")));
         }
 
         cq.select(orderRoot).where(cb.and(predicates.toArray(new Predicate[0])));
@@ -194,6 +190,21 @@ public class TransactionsExecutor {
         TypedQuery<Order> query = entityManager.createQuery(cq).setLockMode(LockModeType.PESSIMISTIC_WRITE);
 
         return query.getResultList();
+    }
+
+    private void accountChangeForNewOrder(EntityManager entityManager, Order newOrder, Order order, Account newOrderAccount, OrderCommand orderCommand, int tradeAmount) {
+        Account orderAccount = order.getAccount();
+        entityManager.lock(orderAccount, LockModeType.PESSIMISTIC_WRITE);
+        double balanceChange = newOrder.getAmount() >= 0 ? order.getLimitPrice() * tradeAmount : -(order.getLimitPrice() * tradeAmount);
+        orderAccount.setBalance(orderAccount.getBalance() + balanceChange);
+        if (newOrder.getAmount() >= 0){
+            addPositionAmount(entityManager, newOrderAccount, tradeAmount, orderCommand.getSym());
+
+            if (order.getLimitPrice() < newOrder.getLimitPrice()){
+                newOrderAccount.setBalance(newOrderAccount.getBalance() + (newOrder.getLimitPrice() - order.getLimitPrice()) * tradeAmount);
+            }
+        }
+        entityManager.merge(orderAccount);
     }
 
     private Element executeCancel(CancelCommand cancelCommand, Document responseDocument) {
@@ -205,6 +216,16 @@ public class TransactionsExecutor {
 
             if (order != null) {
                 if (order.getStatus() == Order.Status.OPEN) {
+                    Account orderAccount = order.getAccount();
+                    entityManager.lock(orderAccount, LockModeType.PESSIMISTIC_WRITE);
+                    if (order.getAmount() >= 0) {
+                        orderAccount.setBalance(orderAccount.getBalance() + (order.getLimitPrice() * order.getAmount()));
+                        entityManager.merge(orderAccount);
+                    }
+                    else {
+                        addPositionAmount(entityManager, orderAccount, -order.getAmount(), order.getSymbol());
+                    }
+
                     order.cancel();
                     response = XMLResponseGenerator.generateStatusByOrder(responseDocument, order, true);
                 } else {
@@ -224,6 +245,26 @@ public class TransactionsExecutor {
             return XMLResponseGenerator.generateErrorResponse(responseDocument, "Transaction Error");
         } finally {
             entityManager.close();
+        }
+    }
+
+    private void addPositionAmount(EntityManager entityManager, Account orderAccount, int amount, String symbol) {
+        Position existingPosition = orderAccount.getPositions().stream()
+                .filter(pos -> symbol.equals(pos.getSym()))
+                .findFirst()
+                .orElse(null);
+
+        if (existingPosition != null) {
+            entityManager.lock(existingPosition, LockModeType.PESSIMISTIC_WRITE);
+            existingPosition.setAmount(existingPosition.getAmount() +  amount);
+            entityManager.merge(existingPosition);
+        }
+        else {
+            Position newPosition = new Position();
+            newPosition.setSym(symbol);
+            newPosition.setAmount(amount);
+            newPosition.addAccount(orderAccount);
+            entityManager.persist(newPosition);
         }
     }
 

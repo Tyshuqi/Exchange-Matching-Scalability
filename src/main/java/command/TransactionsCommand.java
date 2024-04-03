@@ -6,8 +6,8 @@ import java.util.List;
 @XmlRootElement(name = "transactions")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class TransactionsCommand {
-    @XmlAttribute(name = "account")
-    private String account;
+    @XmlAttribute(name = "id")
+    private String id;
 
     @XmlElements({
             @XmlElement(name = "order", type = OrderCommand.class),
@@ -16,8 +16,8 @@ public class TransactionsCommand {
     })
     private List<Object> commands;
 
-    public String getAccount() {
-        return account;
+    public String getAccountId() {
+        return id;
     }
 
     public List<Object> getCommands() {

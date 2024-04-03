@@ -44,6 +44,9 @@ public class CreateExecutor {
         catch (ParserConfigurationException | TransformerException e) {
             return "<error>Unexpected XML Parser Error</error>";
         }
+        catch (NumberFormatException e) {
+            return "<error>Disallowed message format</error>";
+        }
     }
     public void handleSymbolCommand(SymbolCommand symbolCommand, Document responseDocument) {
         String symbol = symbolCommand.getSym();
@@ -78,7 +81,7 @@ public class CreateExecutor {
             if (targetAccount == null) {
                 // Target account does not exist, handle this case appropriately
                 // throw new IllegalStateException("Account with ID " + accountId + " does not exist.");
-                Element responseElement = XMLResponseGenerator.generateErrorCreateResponse(responseDocument, String.valueOf(accountId), symbol, "Account does not exists.");
+                Element responseElement = XMLResponseGenerator.generateErrorCreateResponse(responseDocument, String.valueOf(accountId), symbol, "Account does not exist.");
                 responseDocument.getDocumentElement().appendChild(responseElement);
                 return;
             }
