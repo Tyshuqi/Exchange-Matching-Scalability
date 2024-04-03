@@ -38,20 +38,17 @@ public class Main {
 //            }
         }
 
-<<<<<<< HEAD
 //        Document document = XMLResponseGenerator.generateResponseDocument();
 //        Element opened = XMLResponseGenerator.generateOpenedResponse(document, 10L, "abc", 1, 3.0);
 //        Element error = XMLResponseGenerator.generateErrorResponse(document, "abc");
 //        document.getDocumentElement().appendChild(opened);
 //        document.getDocumentElement().appendChild(error);
-=======
         Document document = XMLResponseGenerator.generateResponseDocument();
         Element opened = XMLResponseGenerator.generateOpenedResponse(document, 10L, "abc", 1, 3.0);
         Element error = XMLResponseGenerator.generateErrorResponseWithId(document, "123456", "Invalid Account ID");
         document.getDocumentElement().appendChild(error.cloneNode(true));
         document.getDocumentElement().appendChild(error.cloneNode(false));
         document.getDocumentElement().appendChild(error.cloneNode(false));
->>>>>>> 27c769375e3f9aa80b425e0a7a432e4e1d619df4
 
 //        System.out.println(XMLResponseGenerator.convertToString(document));
 

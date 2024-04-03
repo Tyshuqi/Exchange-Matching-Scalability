@@ -50,7 +50,6 @@ public class XMLResponseGenerator {
         return opened;
     }
 
-<<<<<<< HEAD
     public static Element generateErrorCreateResponse(Document document, String id, String sym, String message) {
         Element error = document.createElement("error");
         // Set the account id or sym as attributes, if provided
@@ -65,7 +64,6 @@ public class XMLResponseGenerator {
 
         return error;
     }
-=======
 
     public static Element generateStatusByOrder(Document document, Order order, boolean forCancel) {
         Element status = document.createElement(forCancel ? "canceled" : "status");
@@ -94,7 +92,6 @@ public class XMLResponseGenerator {
         return status;
     }
 
->>>>>>> 27c769375e3f9aa80b425e0a7a432e4e1d619df4
     public static Element generateErrorResponse(Document document, String message) {
         Element error = document.createElement("error");
         error.setTextContent(message);
