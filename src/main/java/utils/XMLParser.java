@@ -3,9 +3,7 @@ package utils;
 import command.CreateCommand;
 import command.TransactionsCommand;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
+import javax.xml.bind.*;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -21,18 +19,11 @@ public class XMLParser {
             String rootElementName = xsr.getLocalName();
 
             Object command = null;
-            JAXBContext context;
-
-            switch (rootElementName) {
-                case "create":
-                    context = JAXBContext.newInstance(CreateCommand.class);
-                    break;
-                case "transactions":
-                    context = JAXBContext.newInstance(TransactionsCommand.class);
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unexpected root element: " + rootElementName);
-            }
+            JAXBContext context = switch (rootElementName) {
+                case "create" -> JAXBContext.newInstance(CreateCommand.class);
+                case "transactions" -> JAXBContext.newInstance(TransactionsCommand.class);
+                default -> throw new IllegalArgumentException("Unexpected root element: " + rootElementName);
+            };
 
             if (context != null) {
                 Unmarshaller unmarshaller = context.createUnmarshaller();
