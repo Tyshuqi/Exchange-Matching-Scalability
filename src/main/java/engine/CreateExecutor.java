@@ -54,11 +54,8 @@ public class CreateExecutor {
 
         //Handle the case where there are no accounts
         if (accounts == null || accounts.isEmpty()) {
-            System.out.println("No accounts specified for symbol: " + symbol);
-            // TODO format error handling
-//            Element responseElement = XMLResponseGenerator.generateErrorCreateResponse(responseDocument, accountID, null, "Account ID cannot be null or empty.");
-//            responseDocument.getDocumentElement().appendChild(responseElement);
-//            return;
+            System.out.println("<error>No accounts specified for symbol: " + symbol + "</error>");
+            return;
         }
         for (SymbolAccountCommand account : accounts) {
             insertNewShares(account, symbol, responseDocument);
