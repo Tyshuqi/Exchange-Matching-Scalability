@@ -76,7 +76,6 @@ public class SocketClient {
         int numberOfThreads = 1;
         ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
 
-//        for (int j = 0; j < 10; j++){
 //        for (int i = 1; i <= 20; i++) {
 //            String fileName = "../testxml/test" + i + ".xml";
 //            String xmlData = readXmlFromResources(fileName);
@@ -90,7 +89,7 @@ public class SocketClient {
 //            System.out.println("Thread will send data from: " + fileName);
 //            executor.submit(() -> sendXmlToServer(generateXml()));
 //        }
-//        }
+
 
         for (int i = 0; i < 1000; i++) {
             executor.submit(() -> sendXmlToServer(generateXml()));
