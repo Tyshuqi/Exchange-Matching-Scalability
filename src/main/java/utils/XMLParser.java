@@ -10,30 +10,25 @@ import javax.xml.stream.XMLStreamReader;
 import java.io.StringReader;
 
 public class XMLParser {
-    public static Object parse(String message) {
-        try {
-            XMLInputFactory xif = XMLInputFactory.newInstance();
-            XMLStreamReader xsr = xif.createXMLStreamReader(new StringReader(message));
+    public static Object parse(String message) throws XMLStreamException, JAXBException {
+        XMLInputFactory xif = XMLInputFactory.newInstance();
+        XMLStreamReader xsr = xif.createXMLStreamReader(new StringReader(message));
 
-            xsr.nextTag();
-            String rootElementName = xsr.getLocalName();
+        xsr.nextTag();
+        String rootElementName = xsr.getLocalName();
 
-            Object command = null;
-            JAXBContext context = switch (rootElementName) {
-                case "create" -> JAXBContext.newInstance(CreateCommand.class);
-                case "transactions" -> JAXBContext.newInstance(TransactionsCommand.class);
-                default -> throw new IllegalArgumentException("Unexpected root element: " + rootElementName);
-            };
+        Object command = null;
+        JAXBContext context = switch (rootElementName) {
+            case "create" -> JAXBContext.newInstance(CreateCommand.class);
+            case "transactions" -> JAXBContext.newInstance(TransactionsCommand.class);
+            default -> throw new IllegalArgumentException("Unexpected root element: " + rootElementName);
+        };
 
-            if (context != null) {
-                Unmarshaller unmarshaller = context.createUnmarshaller();
-                command = unmarshaller.unmarshal(xsr);
-            }
-
-            return command;
+        if (context != null) {
+            Unmarshaller unmarshaller = context.createUnmarshaller();
+            command = unmarshaller.unmarshal(xsr);
         }
-        catch (XMLStreamException | JAXBException e) {
-            throw new RuntimeException(e);
-        }
+
+        return command;
     }
 }
