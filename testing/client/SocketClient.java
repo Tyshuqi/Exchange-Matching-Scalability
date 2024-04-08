@@ -76,8 +76,11 @@ public class SocketClient {
         int numberOfThreads = 1;
         ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
 
-//        for (int i = 1; i <= 20; i++) {
-//            String fileName = "../testxml/test" + i + ".xml";
+//
+//
+//        for (int i = 21; i <= 31; i++) {
+//            String fileName = "testing/testxml/test" + i + ".xml";
+
 //            String xmlData = readXmlFromResources(fileName);
 //
 //            if (xmlData == null) {
@@ -87,11 +90,12 @@ public class SocketClient {
 //
 //            // log
 //            System.out.println("Thread will send data from: " + fileName);
+
 //            executor.submit(() -> sendXmlToServer(generateXml()));
 //        }
 
 
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 200; i++) {
             executor.submit(() -> sendXmlToServer(generateXml()));
         }
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -100,5 +104,5 @@ public class SocketClient {
             executor.shutdownNow();
         }));
     }
-}
 
+}
