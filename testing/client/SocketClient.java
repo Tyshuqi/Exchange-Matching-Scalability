@@ -1,5 +1,3 @@
-package client;
-
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -40,10 +38,7 @@ public class SocketClient {
 
 
     public static String readXmlFromResources(String fileName) {
-        try (InputStream inputStream = SocketClient.class.getClassLoader().getResourceAsStream(fileName)) {
-            if (inputStream == null) {
-                throw new FileNotFoundException("Resource file" + fileName + "not found");
-            }
+        try (InputStream inputStream = new FileInputStream(fileName)) {
             return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             e.printStackTrace();
@@ -80,11 +75,11 @@ public class SocketClient {
         SERVER_HOST = "localhost";
         SERVER_PORT = 12345;
 
-        int numberOfThreads = 4;
+        int numberOfThreads = 1;
         ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
 
-        for (int i = 1; i <= numberOfThreads; i++) {
-            String fileName = "test" + i + ".xml";
+        for (int i = 1; i <= 20; i++) {
+            String fileName = "../testxml/test" + i + ".xml";
             String xmlData = readXmlFromResources(fileName);
 
             if (xmlData == null) {
