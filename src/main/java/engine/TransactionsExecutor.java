@@ -70,10 +70,10 @@ public class TransactionsExecutor {
             return XMLResponseGenerator.convertToString(responseDocument);
         }
         catch (ParserConfigurationException | TransformerException e) {
-            return "<error>Unexpected XML Parser Error</error>";
+            return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><results><error>Unexpected XML Parser Error</error></results>";
         }
         catch (NumberFormatException e) {
-            return "<error>Disallowed message format</error>";
+            return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><results><error>Disallowed message format</error></results>";
         }
     }
 

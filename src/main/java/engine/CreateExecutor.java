@@ -42,10 +42,10 @@ public class CreateExecutor {
             return XMLResponseGenerator.convertToString(responseDocument);
         }
         catch (ParserConfigurationException | TransformerException e) {
-            return "<error>Unexpected XML Parser Error</error>";
+            return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><results><error>Unexpected XML Parser Error</error></results>";
         }
         catch (NumberFormatException e) {
-            return "<error>Disallowed message format</error>";
+            return "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><error>Disallowed message format</error></results>";
         }
     }
     public void handleSymbolCommand(SymbolCommand symbolCommand, Document responseDocument) {
@@ -54,7 +54,8 @@ public class CreateExecutor {
 
         //Handle the case where there are no accounts
         if (accounts == null || accounts.isEmpty()) {
-            System.out.println("<error>No accounts specified for symbol: " + symbol + "</error>");
+            Element responseElement = XMLResponseGenerator.generateErrorResponse(responseDocument, "<error>No accounts specified for symbol: " + symbol + "</error>");
+            responseDocument.getDocumentElement().appendChild(responseElement);
             return;
         }
         for (SymbolAccountCommand account : accounts) {
