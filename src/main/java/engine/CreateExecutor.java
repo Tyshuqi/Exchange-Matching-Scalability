@@ -86,6 +86,7 @@ public class CreateExecutor {
             Position existingPosition = findPositionBySymbol(targetAccount, symbol);
             // Position exists, update shares
             if (existingPosition != null) {
+                entityManager.lock(existingPosition, LockModeType.PESSIMISTIC_WRITE);
                 existingPosition.setAmount(existingPosition.getAmount() +  account.getShares());
                 // Merge the entity
                 entityManager.merge(existingPosition);
