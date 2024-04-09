@@ -3,11 +3,13 @@ package engine;
 import command.CreateCommand;
 import command.TransactionsCommand;
 import utils.XMLParser;
+import utils.XMLResponseGenerator;
 
 import javax.xml.bind.JAXBException;
 import javax.xml.stream.XMLStreamException;
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class TaskHandler implements Runnable {
     Socket clientSocket;
@@ -55,7 +57,7 @@ public class TaskHandler implements Runnable {
                 e.printStackTrace();
             }
 
-            outputStream.writeUTF(response);
+            outputStream.write(XMLResponseGenerator.generateResponseString(response).getBytes(StandardCharsets.UTF_8));
 
         } catch (IOException e) {
             e.printStackTrace();

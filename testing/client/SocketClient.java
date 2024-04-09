@@ -17,7 +17,8 @@ public class SocketClient {
         String threadInfo = "Thread ID: " + Thread.currentThread().getId() + ", Name: " + Thread.currentThread().getName();
         try (Socket socket = new Socket(SERVER_HOST, SERVER_PORT);
              DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
-             DataInputStream inputStream = new DataInputStream(socket.getInputStream())) {
+             DataInputStream inputStream = new DataInputStream(socket.getInputStream());
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
 
             // Log sending data with thread info
             System.out.println(threadInfo + " - Sending XML data to server.");
@@ -29,7 +30,20 @@ public class SocketClient {
             socket.setSoTimeout(10000);
             // Read response from server and log with thread info
             long startTime = System.currentTimeMillis();
-            String response = inputStream.readUTF(); // This will block until a response is received
+            String lengthLine = reader.readLine();
+            int xmlLength = Integer.parseInt(lengthLine.trim());
+
+            // Now, read exactly xmlLength characters of XML data
+            char[] xmlChars = new char[xmlLength];
+            int totalRead = 0;
+            while (totalRead < xmlLength) {
+                int charsRead = reader.read(xmlChars, totalRead, xmlLength - totalRead);
+                if (charsRead == -1) { // EOF, should not happen if XML length is correct
+                    System.out.println("Invalid XML length");
+                }
+                totalRead += charsRead;
+            }
+            String response = new String(xmlChars); // This will block until a response is received
             long endTime = System.currentTimeMillis();
             operationsTime += endTime - startTime;
 

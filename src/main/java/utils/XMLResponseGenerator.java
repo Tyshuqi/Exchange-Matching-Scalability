@@ -15,6 +15,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 
 public class XMLResponseGenerator {
 
@@ -129,5 +130,12 @@ public class XMLResponseGenerator {
         StringWriter writer = new StringWriter();
         transformer.transform(new DOMSource(document), new StreamResult(writer));
         return writer.getBuffer().toString();
+    }
+
+    public static String generateResponseString(String xmlData) {
+        byte[] xmlBytes = xmlData.getBytes(StandardCharsets.UTF_8);
+        int length = xmlBytes.length;
+
+        return length + "\n" + xmlData;
     }
 }
