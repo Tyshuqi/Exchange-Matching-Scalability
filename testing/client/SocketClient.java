@@ -91,7 +91,7 @@ public class SocketClient {
 
 
     public static void main(String[] args) {
-        SERVER_HOST = "localhost";
+        SERVER_HOST = "152.3.54.94";
         SERVER_PORT = 12345;
 
         int numberOfThreads = 1;

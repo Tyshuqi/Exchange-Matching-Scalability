@@ -58,6 +58,7 @@ public class TaskHandler implements Runnable {
             }
 
             outputStream.write(XMLResponseGenerator.generateResponseString(response).getBytes(StandardCharsets.UTF_8));
+            outputStream.flush();
 
         } catch (IOException e) {
             e.printStackTrace();
