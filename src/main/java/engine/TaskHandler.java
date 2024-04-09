@@ -6,9 +6,7 @@ import utils.XMLParser;
 
 import javax.xml.bind.JAXBException;
 import javax.xml.stream.XMLStreamException;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 
 public class TaskHandler implements Runnable {
@@ -20,10 +18,27 @@ public class TaskHandler implements Runnable {
     @Override
     public void run() {
         try (DataInputStream inputStream = new DataInputStream(clientSocket.getInputStream());
-             DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream())) {
-            String message = inputStream.readUTF();
-            Object command;
+             DataOutputStream outputStream = new DataOutputStream(clientSocket.getOutputStream());
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
             String response = "";
+
+            String lengthLine = reader.readLine();
+            int xmlLength = Integer.parseInt(lengthLine.trim());
+
+            // Now, read exactly xmlLength characters of XML data
+            char[] xmlChars = new char[xmlLength];
+            int totalRead = 0;
+            while (totalRead < xmlLength) {
+                int charsRead = reader.read(xmlChars, totalRead, xmlLength - totalRead);
+                if (charsRead == -1) { // EOF, should not happen if XML length is correct
+                    response = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><results><error>Invalid XML Length</error></results>";;
+                }
+                totalRead += charsRead;
+            }
+            String message = new String(xmlChars);
+            System.out.println(message);
+
+            Object command;
 
             try {
                 command = XMLParser.parse(message);

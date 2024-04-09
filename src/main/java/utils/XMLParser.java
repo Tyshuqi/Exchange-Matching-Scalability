@@ -11,8 +11,10 @@ import java.io.StringReader;
 
 public class XMLParser {
     public static Object parse(String message) throws XMLStreamException, JAXBException {
+        String trimmedMessage = message.substring(message.indexOf('<'));
+
         XMLInputFactory xif = XMLInputFactory.newInstance();
-        XMLStreamReader xsr = xif.createXMLStreamReader(new StringReader(message));
+        XMLStreamReader xsr = xif.createXMLStreamReader(new StringReader(trimmedMessage));
 
         xsr.nextTag();
         String rootElementName = xsr.getLocalName();

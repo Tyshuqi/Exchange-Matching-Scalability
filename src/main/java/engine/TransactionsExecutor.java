@@ -25,6 +25,7 @@ import javax.xml.transform.TransformerException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class TransactionsExecutor {
     TransactionsCommand command;
@@ -48,15 +49,16 @@ public class TransactionsExecutor {
             }
 
             if (account != null) {
+                Long accountId = Long.parseLong(command.getAccountId());
                 for (Object subCommand : command.getCommands()) {
                     if (subCommand instanceof OrderCommand) {
                         Element orderResponse = executeOrder((OrderCommand) subCommand, responseDocument);
                         responseDocument.getDocumentElement().appendChild(orderResponse);
                     } else if (subCommand instanceof CancelCommand) {
-                        Element cancelResponse = executeCancel((CancelCommand) subCommand, responseDocument);
+                        Element cancelResponse = executeCancel((CancelCommand) subCommand, accountId, responseDocument);
                         responseDocument.getDocumentElement().appendChild(cancelResponse);
                     } else if (subCommand instanceof QueryCommand) {
-                        Element queryResponse = executeQuery((QueryCommand) subCommand, responseDocument);
+                        Element queryResponse = executeQuery((QueryCommand) subCommand, accountId, responseDocument);
                         responseDocument.getDocumentElement().appendChild(queryResponse);
                     }
                 }
@@ -207,7 +209,7 @@ public class TransactionsExecutor {
         entityManager.merge(orderAccount);
     }
 
-    private Element executeCancel(CancelCommand cancelCommand, Document responseDocument) {
+    private Element executeCancel(CancelCommand cancelCommand, Long accountId, Document responseDocument) {
         EntityManager entityManager = EntityManagement.getEntityManager();
         try {
             Element response;
@@ -218,16 +220,20 @@ public class TransactionsExecutor {
                 if (order.getStatus() == Order.Status.OPEN) {
                     Account orderAccount = order.getAccount();
                     entityManager.lock(orderAccount, LockModeType.PESSIMISTIC_WRITE);
-                    if (order.getAmount() >= 0) {
-                        orderAccount.setBalance(orderAccount.getBalance() + (order.getLimitPrice() * order.getAmount()));
-                        entityManager.merge(orderAccount);
+                    if (Objects.equals(orderAccount.getId(), accountId)) {
+                        if (order.getAmount() >= 0) {
+                            orderAccount.setBalance(orderAccount.getBalance() + (order.getLimitPrice() * order.getAmount()));
+                            entityManager.merge(orderAccount);
+                        } else {
+                            addPositionAmount(entityManager, orderAccount, -order.getAmount(), order.getSymbol());
+                        }
+
+                        order.cancel();
+                        response = XMLResponseGenerator.generateStatusByOrder(responseDocument, order, true);
                     }
                     else {
-                        addPositionAmount(entityManager, orderAccount, -order.getAmount(), order.getSymbol());
+                        response = XMLResponseGenerator.generateErrorResponse(responseDocument, "The order does not belong to the account");
                     }
-
-                    order.cancel();
-                    response = XMLResponseGenerator.generateStatusByOrder(responseDocument, order, true);
                 } else {
                     response = XMLResponseGenerator.generateErrorResponseWithId(responseDocument, cancelCommand.getId(), "Order closed.");
                 }
@@ -268,14 +274,19 @@ public class TransactionsExecutor {
         }
     }
 
-    private Element executeQuery(QueryCommand queryCommand, Document responseDocument) {
+    private Element executeQuery(QueryCommand queryCommand, Long accountId, Document responseDocument) {
         EntityManager entityManager = EntityManagement.getEntityManager();
         try {
             Element response;
             entityManager.getTransaction().begin();
             Order order = entityManager.find(Order.class, Long.parseLong(queryCommand.getId()), LockModeType.PESSIMISTIC_READ);
             if (order != null) {
-                response = XMLResponseGenerator.generateStatusByOrder(responseDocument, order, false);
+                if (Objects.equals(order.getAccount().getId(), accountId)){
+                    response = XMLResponseGenerator.generateStatusByOrder(responseDocument, order, false);
+                }
+                else {
+                    response = XMLResponseGenerator.generateErrorResponse(responseDocument, "The order does not belong to the account");
+                }
             }
             else {
                 response = XMLResponseGenerator.generateErrorResponseWithId(responseDocument, queryCommand.getId(), "Order not exist.");

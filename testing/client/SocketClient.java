@@ -23,7 +23,7 @@ public class SocketClient {
             System.out.println(threadInfo + " - Sending XML data to server.");
 
             // Send XML data to server
-            outputStream.writeUTF(xmlData);
+            outputStream.write(xmlData.getBytes(StandardCharsets.UTF_8));
             outputStream.flush();
 
             socket.setSoTimeout(10000);
@@ -68,6 +68,13 @@ public class SocketClient {
                 "</create>";
     }
 
+    public static String generateSendData(String xmlData) {
+        byte[] xmlBytes = xmlData.getBytes(StandardCharsets.UTF_8);
+        int length = xmlBytes.length;
+
+        return length + "\n" + xmlData;
+    }
+
 
     public static void main(String[] args) {
         SERVER_HOST = "localhost";
@@ -76,24 +83,24 @@ public class SocketClient {
         int numberOfThreads = 1;
         ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
 
-//        for (int i = 1; i <= 20; i++) {
-//            String fileName = "../testxml/test" + i + ".xml";
-//            String xmlData = readXmlFromResources(fileName);
-//
-//            if (xmlData == null) {
-//                System.err.println("Failed to read XML data from file: " + fileName);
-//                continue;
-//            }
-//
-//            // log
-//            System.out.println("Thread will send data from: " + fileName);
-//            executor.submit(() -> sendXmlToServer(generateXml()));
-//        }
+        for (int i = 1; i <= 20; i++) {
+            String fileName = "../testxml/test" + i + ".xml";
+            String xmlData = readXmlFromResources(fileName);
 
+            if (xmlData == null) {
+                System.err.println("Failed to read XML data from file: " + fileName);
+                continue;
+            }
 
-        for (int i = 0; i < 1000; i++) {
-            executor.submit(() -> sendXmlToServer(generateXml()));
+            // log
+            System.out.println("Thread will send data from: " + fileName);
+            executor.submit(() -> sendXmlToServer(generateSendData(xmlData)));
         }
+
+
+//        for (int i = 0; i < 1000; i++) {
+//            executor.submit(() -> sendXmlToServer(generateSendData(generateXml())));
+//        }
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down...");
             System.out.println(operationsTime);
