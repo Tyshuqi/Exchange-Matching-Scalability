@@ -83,7 +83,7 @@ public class SocketClient {
         int numberOfThreads = 1;
         ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
 
-        for (int i = 1; i <= 20; i++) {
+        for (int i = 21; i <= 31; i++) {
             String fileName = "../testxml/test" + i + ".xml";
             String xmlData = readXmlFromResources(fileName);
 
